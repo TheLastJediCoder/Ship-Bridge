@@ -1,37 +1,68 @@
 import bodyParser from 'body-parser';
 import express from 'express';
-// import mysql from 'mysql';
-
-import mysql from 'mysql2';
+import bcrypt from 'bcrypt';
+import { RowDataPacket } from 'mysql2/promise';
+import { closePool, executeQuery } from './db-connection';
+import jwt from 'jsonwebtoken';
 
 const app = express();
-const port = 3000;
+const PORT = 3000;
+export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'admin',
-  database: 'shipbridge',
-});
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-app.post('/users', (req, res) => {
-  connection.connect();
+app.post('/users', async (req, res) => {
+  const user = req.body;
+  const salt = await bcrypt.genSalt(12);
+  user.password = await bcrypt.hash(user.password, salt);
 
-  connection.query(
-    'INSERT INTO users (username, email) VALUES ("test", "test")',
-    (err) => {
-      if (err) throw err;
-    },
-  );
+  const query = `INSERT INTO users (username, email, password) VALUES (?, ?, ?);`;
+  const params = [user.username, user.email, user.password];
+
+  await executeQuery(query, params);
+
   res.send(req.body);
   res.status(201);
+});
+
+interface User extends RowDataPacket {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+}
+
+app.post('/login', async (req, res) => {
+  const requestBody = req.body;
+  const query = 'SELECT * FROM users WHERE username = ?;';
+  const params = [requestBody.username];
+  const results = await executeQuery<User[]>(query, params);
+  const user = results[0];
+
+  const isPasswordValid = await bcrypt.compare(
+    requestBody.password,
+    user.password,
+  );
+
+  if (!isPasswordValid) {
+    res.status(401);
+    res.send({ error: 'Please verify username and password' });
+    return;
+  }
+
+  const token = jwt.sign(
+    { username: user.username, email: user.email },
+    JWT_SECRET,
+    { expiresIn: 60 * 60 * 6 },
+  );
+
+  res.status(200);
+  res.send({ token: token });
 });
 
 app.get('/users/:userId', (req, res) => {
@@ -50,6 +81,16 @@ app.get('/users/:userId', (req, res) => {
   res.status(200);
 });
 
-app.listen(port, () => {
-  console.log(`Backend running on port ${port}`);
+process.on('SIGTERM', async () => {
+  await closePool();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  await closePool();
+  process.exit(0);
+});
+
+app.listen(PORT, async () => {
+  console.log(`Backend running on port ${PORT}`);
 });
