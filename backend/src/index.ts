@@ -1,9 +1,9 @@
 import bodyParser from 'body-parser';
 import express from 'express';
 import bcrypt from 'bcrypt';
-import { RowDataPacket } from 'mysql2/promise';
 import { closePool, executeQuery } from './db-connection';
 import jwt from 'jsonwebtoken';
+import { User } from './models/user.model';
 
 const app = express();
 const PORT = 3000;
@@ -16,13 +16,31 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-app.post('/users', async (req, res) => {
-  const user = req.body;
-  const salt = await bcrypt.genSalt(12);
-  user.password = await bcrypt.hash(user.password, salt);
+const getUserByUsername = async (
+  username: string,
+): Promise<User | undefined> => {
+  const query = 'SELECT * FROM users WHERE username = ?;';
+  const params = [username];
+  const results = await executeQuery<User[]>(query, params);
 
+  if (results.length > 0) {
+    return results[0];
+  }
+};
+
+app.post('/users', async (req, res) => {
+  const requestBody = req.body;
+  const salt = await bcrypt.genSalt(12);
+  const existingUser = await getUserByUsername(requestBody.username);
+
+  if (existingUser) {
+    res.status(400).json('Please pick different username');
+    return;
+  }
+
+  const hashedPassword = await bcrypt.hash(requestBody.password, salt);
   const query = `INSERT INTO users (username, email, password) VALUES (?, ?, ?);`;
-  const params = [user.username, user.email, user.password];
+  const params = [requestBody.username, requestBody.email, hashedPassword];
 
   await executeQuery(query, params);
 
@@ -30,19 +48,15 @@ app.post('/users', async (req, res) => {
   res.status(201);
 });
 
-interface User extends RowDataPacket {
-  id: number;
-  username: string;
-  email: string;
-  password: string;
-}
-
 app.post('/login', async (req, res) => {
   const requestBody = req.body;
-  const query = 'SELECT * FROM users WHERE username = ?;';
-  const params = [requestBody.username];
-  const results = await executeQuery<User[]>(query, params);
-  const user = results[0];
+  const user = await getUserByUsername(requestBody.username);
+
+  if (!user) {
+    res.status(401);
+    res.send({ error: 'Invalid credentials' });
+    return;
+  }
 
   const isPasswordValid = await bcrypt.compare(
     requestBody.password,
@@ -51,7 +65,7 @@ app.post('/login', async (req, res) => {
 
   if (!isPasswordValid) {
     res.status(401);
-    res.send({ error: 'Please verify username and password' });
+    res.send({ error: 'Invalid credentials' });
     return;
   }
 
@@ -63,22 +77,6 @@ app.post('/login', async (req, res) => {
 
   res.status(200);
   res.send({ token: token });
-});
-
-app.get('/users/:userId', (req, res) => {
-  const users = [
-    {
-      id: 1,
-      name: 'test1',
-    },
-    {
-      id: 2,
-      name: 'test2',
-    },
-  ];
-  const userId = req.params['userId'];
-  res.send(users[parseInt(userId)]);
-  res.status(200);
 });
 
 process.on('SIGTERM', async () => {

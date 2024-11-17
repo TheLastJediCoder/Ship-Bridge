@@ -38,7 +38,6 @@ export const executeQuery = async <T>(
   const connection = await getConnection();
   try {
     const [results] = await connection.execute(query, params);
-    console.log(results);
     return results as T;
   } catch (error) {
     const errorMessage =
