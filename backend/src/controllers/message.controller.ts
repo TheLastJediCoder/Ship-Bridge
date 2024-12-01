@@ -9,7 +9,6 @@ export const messageRouter = express.Router();
 messageRouter.use(authenticate);
 
 const addMessage = async (req: Request, res: Response) => {
-  console.log(req.userContext);
   const createMessageRequest = req.body as CreateMessageRequest;
 
   if (createMessageRequest.senderId === createMessageRequest.receiverId) {
