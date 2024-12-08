@@ -1,3 +1,5 @@
 export default function Home() {
-  return (<h1>Ship Bridge</h1>);
+  return (
+    <h1>Home Page</h1>
+  );
 }
