@@ -8,7 +8,7 @@ export interface UserContext {
 declare global {
   namespace Express {
     interface Request {
-      userContext?: UserContext;
+      userContext: UserContext;
     }
   }
 }

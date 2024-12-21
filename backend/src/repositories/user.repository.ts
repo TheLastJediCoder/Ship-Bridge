@@ -30,7 +30,7 @@ export const createUser = async (
   hashedPassword: string,
 ): Promise<number | undefined> => {
   const query =
-    'INSERT INTO users (username, email, password) VALUES (?, ?, ?);';
+    'INSERT INTO users (username, email, passwordHash) VALUES (?, ?, ?);';
   const params = [
     createUserRequest.username,
     createUserRequest.email,

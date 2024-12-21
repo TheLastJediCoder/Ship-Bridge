@@ -4,6 +4,7 @@ import { closePool } from './db-connection';
 import { uesrRouter } from './controllers/user.controller';
 import { loginRouter } from './controllers/login.controller';
 import { messageRouter } from './controllers/message.controller';
+import { orderRouter } from './controllers/order.controller';
 
 const app = express();
 const PORT = 3000;
@@ -15,6 +16,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/', loginRouter);
 app.use('/users', uesrRouter);
 app.use('/messages', messageRouter);
+app.use('/orders', orderRouter);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');

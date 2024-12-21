@@ -16,7 +16,6 @@ const addUser = async (req: Request, res: Response) => {
   }
 
   const hashedPassword = await bcrypt.hash(createUserRequest.password, salt);
-
   const userId = await createUser(createUserRequest, hashedPassword);
 
   res.send({ username: createUserRequest.username, id: userId });

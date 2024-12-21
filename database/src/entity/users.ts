@@ -12,5 +12,5 @@ export class Users {
   email: string;
 
   @Column()
-  passwordHash: number;
+  passwordHash: string;
 }
