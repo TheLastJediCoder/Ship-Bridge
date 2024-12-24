@@ -1,10 +1,11 @@
 import mysql from 'mysql2/promise';
+import "dotenv/config";
 
 const dbConfig: mysql.ConnectionOptions = {
-  host: 'localhost',
-  user: 'root',
-  password: 'admin',
-  database: 'shipbridge',
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USERNAME,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
 };
 
 const pool = mysql.createPool(dbConfig);

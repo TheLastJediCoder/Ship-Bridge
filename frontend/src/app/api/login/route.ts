@@ -1,3 +1,4 @@
+import { createSession } from "@/app/lib/session";
 import { NextApiRequest } from "next";
 
 export async function POST(request: NextApiRequest) {
@@ -12,6 +13,10 @@ export async function POST(request: NextApiRequest) {
     });
     const res = await fetch(req);
     const data = await res.json();
+
+    if (!data.error) {
+      await createSession(data.token)
+    }
 
     return Response.json(data);
   } catch {
